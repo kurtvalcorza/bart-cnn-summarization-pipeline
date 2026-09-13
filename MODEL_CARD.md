@@ -3,6 +3,8 @@ license: mit
 model_card_spec: "1.1"
 pipeline_tag: summarization
 base_model: facebook/bart-large-cnn
+date_published: "2019-11"
+date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-21"
 ---
 
 # BART-large CNN (DIMER package v0.1.0) — Sequence-to-Sequence Summarizer (Abstractive Summarization)
@@ -11,7 +13,6 @@ base_model: facebook/bart-large-cnn
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-facebookresearch%2Ffairseq-181717?style=flat&logo=github&logoColor=white)](https://github.com/facebookresearch/fairseq/tree/main/examples/bart)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-1910.13461-b31b1b.svg)](https://arxiv.org/abs/1910.13461)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Pipeline](https://img.shields.io/badge/Pipeline-bart--cnn--summarization--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/bart-cnn-summarization-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 `facebook/bart-large-cnn` is the BART-large checkpoint (Lewis et al., arXiv:1910.13461) fine-tuned on the CNN/DailyMail news-summarization dataset, published by Facebook AI on the Hugging Face Hub (the model card there was written by the Hugging Face team, as it says) and pinned here to revision `37f520fa929c961707657b28798b30c003dd100b`. BART is a denoising sequence-to-sequence Transformer: a 12-layer bidirectional encoder and a 12-layer autoregressive decoder with `d_model` 1024, 16 attention heads, a 50 264-entry byte-level BPE vocabulary and 1024 positions (snapshot `config.json`), 406 290 432 float32 parameters in the pinned `model.safetensors` (counted from the SafeTensors header). Pre-training corrupts text with a noising function and learns to reconstruct it; the CNN/DailyMail fine-tune then trains the decoder to emit a highlight-style summary of a news article. At inference this package encodes one document once and runs deterministic beam search on the decoder (`num_beams` 4, `length_penalty` 2.0, `no_repeat_ngram_size` 3, `early_stopping` true, and the length bounds of the snapshot's `generation_config_for_summarization.json`) to produce one summary. No adaptation happens in this repository — no training, fine-tuning or in-context conditioning; the pinned checkpoint is used as published. What this repository adds is packaging: the `BARTSummarizationPipeline` class in `src/bart_summarization_pipeline/pipeline.py`, digest verification of the local snapshot (`verify_snapshot`, `stage_missing_files`), input and generation-setting validation against named ceilings, and a fixed output contract that reports token counts and whether the summary was cut by the length ceiling.
 
