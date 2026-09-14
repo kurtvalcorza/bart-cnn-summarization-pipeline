@@ -2,6 +2,7 @@
 license: mit
 model_card_spec: "1.1"
 pipeline_tag: summarization
+task: "Others - Text Summarization"
 base_model: facebook/bart-large-cnn
 date_published: "2019-11"
 date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-21"
