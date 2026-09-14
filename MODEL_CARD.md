@@ -7,7 +7,7 @@ date_published: "2019-11"
 date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-21"
 ---
 
-# BART-large CNN (DIMER package v0.1.0) — Sequence-to-Sequence Summarizer (Abstractive Summarization)
+# BART-large CNN — Sequence-to-Sequence Summarizer (Abstractive Summarization)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-facebook%2Fbart--large--cnn-ffcc4d?style=flat)](https://huggingface.co/facebook/bart-large-cnn)
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-facebookresearch%2Ffairseq-181717?style=flat&logo=github&logoColor=white)](https://github.com/facebookresearch/fairseq/tree/main/examples/bart)
