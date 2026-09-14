@@ -3,6 +3,8 @@ license: mit
 model_card_spec: "1.1"
 pipeline_tag: summarization
 base_model: facebook/bart-large-cnn
+date_published: "2019-11"
+date_published_source: "fairseq BART code+checkpoint release, examples/bart first commit 2019-11-09 (facebookresearch/fairseq#902); Hub history begins 2020-02-21"
 ---
 
 # BART-large CNN (DIMER package v0.1.0) — Sequence-to-Sequence Summarizer (Abstractive Summarization)
@@ -11,7 +13,6 @@ base_model: facebook/bart-large-cnn
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-facebookresearch%2Ffairseq-181717?style=flat&logo=github&logoColor=white)](https://github.com/facebookresearch/fairseq/tree/main/examples/bart)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-1910.13461-b31b1b.svg)](https://arxiv.org/abs/1910.13461)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Pipeline](https://img.shields.io/badge/Pipeline-bart--cnn--summarization--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/bart-cnn-summarization-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 `facebook/bart-large-cnn` is the BART-large checkpoint (Lewis et al., arXiv:1910.13461) fine-tuned on the CNN/DailyMail news-summarization dataset, published by Facebook AI on the Hugging Face Hub (the model card there was written by the Hugging Face team, as it says) and pinned here to revision `37f520fa929c961707657b28798b30c003dd100b`. BART is a denoising sequence-to-sequence Transformer: a 12-layer bidirectional encoder and a 12-layer autoregressive decoder with `d_model` 1024, 16 attention heads, a 50 264-entry byte-level BPE vocabulary and 1024 positions (snapshot `config.json`), 406 290 432 float32 parameters in the pinned `model.safetensors` (counted from the SafeTensors header). Pre-training corrupts text with a noising function and learns to reconstruct it; the CNN/DailyMail fine-tune then trains the decoder to emit a highlight-style summary of a news article. At inference this package encodes one document once and runs deterministic beam search on the decoder (`num_beams` 4, `length_penalty` 2.0, `no_repeat_ngram_size` 3, `early_stopping` true, and the length bounds of the snapshot's `generation_config_for_summarization.json`) to produce one summary. No adaptation happens in this repository — no training, fine-tuning or in-context conditioning; the pinned checkpoint is used as published. What this repository adds is packaging: the `BARTSummarizationPipeline` class in `src/bart_summarization_pipeline/pipeline.py`, digest verification of the local snapshot (`verify_snapshot`, `stage_missing_files`), input and generation-setting validation against named ceilings, and a fixed output contract that reports token counts and whether the summary was cut by the length ceiling.
 
@@ -60,7 +61,7 @@ The training data was captured by no physical sensor: it is text. The upstream R
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `numpy==2.5.3` (exact pins in `pyproject.toml`), float32. This is a 406 M-parameter model whose `model.safetensors` is 1 625 222 120 bytes, so it needs roughly 1.7 GB of free RAM for the weights alone, and beam search with 4 beams over up to 141 decoder steps is the slow half of a call. `from_pretrained(device=None)` picks `cuda:0` when available, else CPU; this repository's smoke ran on CPU only (Windows venv, `CUDA_VISIBLE_DEVICES=-1`, `device="cpu"`): loading and digest-verifying the 1.63 GB snapshot took 6.72 s and one `summarize` call on a 232-token synthetic passage with the pinned defaults took 4.28 s. The CUDA path is untested in this repository. Data environment: inputs are assumed to be English news-style expository prose of a few hundred to a thousand tokens, resembling the CNN/DailyMail articles the decoder was fine-tuned on; behaviour on other languages, dialogue, scientific or legal text, lists and tables, or very short inputs (where the 55-token minimum forces padding-out) is not measured here and is expected to degrade.
+Operating environment: Python 3.12 with `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `numpy==2.5.3` (exact pins in `pyproject.toml`), float32. This is a 406 M-parameter model whose `model.safetensors` is 1 625 222 120 bytes, so it needs roughly 1.7 GB of free RAM for the weights alone, and beam search with 4 beams over up to 141 decoder steps is the slow half of a call. `from_pretrained(device=None)` picks `cuda:0` when available, else CPU; this repository's smoke ran on CPU only (Windows venv, `CUDA_VISIBLE_DEVICES=-1`, `device="cpu"`): loading and digest-verifying the 1.63 GB snapshot took 6.72 s and one `summarize` call on a 232-token synthetic passage with the pinned defaults took 4.28 s. The CUDA path is untested in this repository. Data environment: inputs are assumed to be English news-style expository prose of a few hundred to a thousand tokens, resembling the CNN/DailyMail articles the decoder was fine-tuned on; behaviour on other languages, dialogue, scientific or legal text, lists and tables, or very short inputs (where the 55-token minimum forces padding-out) is not measured here and is expected to degrade.
 
 #### Metrics
 
@@ -119,7 +120,7 @@ The pipeline must not be used for surveillance, biometric or demographic profili
 
 ## Runtime
 
-- Pins: `torch==2.14.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `huggingface-hub==0.36.2`, `safetensors==0.8.0`, `numpy==2.5.3`; Python 3.12.
+- Pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `tokenizers==0.22.2`, `huggingface-hub==0.36.2`, `safetensors==0.8.0`, `numpy==2.5.3`; Python 3.12.
 - Precision: float32 on both CPU and CUDA (`dtype=torch.float32` in the loader).
 - Measured (Windows venv `dimer-next16`, CPU, `CUDA_VISIBLE_DEVICES=-1`, `HF_HUB_OFFLINE=1`, `device="cpu"`): source `local-snapshot`, load + verify 6.72 s; `summarize` of a synthetic three-paragraph passage (1183 characters, 232 tokens) with the pinned defaults 4.28 s → 81 generated tokens, `stopped_by: eos`, `truncated: false`; the summary reproduced the passage's first two sentences verbatim and paraphrased the third ("The decision was driven by a series of pipe failures last winter that left several streets without water for days."), which is one observation of the model's largely extractive behaviour on short expository input, not a result. A first run with an explicit `min_length=0` override produced the same summary and a transformers warning; the override was removed. The CUDA path was not run.
 - Tests: `pytest -q -o addopts= tests` — 22 offline tests plus the notebook parity tests, no weights required; `ruff check src tests tools` clean.
