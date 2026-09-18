@@ -131,7 +131,7 @@ A known-failing default path in the supported runtime blocks release (REL11).
 
 | Notebook | Commit / notebook blob | Date (UTC) | Executor | Outcome |
 |---|---|---|---|---|
-| `bart_summarization_colab.ipynb` (`E2E`) | `__LOCAL_ROW__` | 2026-09-19 | Local pre-flight harness (Windows, CPython 3.12.10, CPU, `google.colab` shim, pins pre-installed) | PASS — pre-flight only, **not** promotion evidence |
+| `bart_summarization_colab.ipynb` (`E2E`) | `52c3522` / `afa4e964` | 2026-09-19 | Local pre-flight harness (Windows, CPython 3.12.10, CPU, `google.colab` shim, pins pre-installed) | PASS — pre-flight only, **not** promotion evidence |
 
 ## Recorded executions
 
@@ -142,7 +142,7 @@ runtime, not general estimates. No hosted run of the earlier `TASK-INFERENCE` no
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| 2026-09-19 | `__LOCAL_ROW__` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | `__LOCAL_EXEC__` |
+| 2026-09-19 | `52c3522` / `afa4e964` | Local pre-flight harness (Windows, CPython 3.12.10, CPU float32, `torch 2.14.0+cu130` with `CUDA_VISIBLE_DEVICES=-1`, `transformers 4.57.6`) | Default sample path (install skipped, pins pre-installed → three carried modules → inline manifest assert → `stage_missing_files` fetched 0 of 8 entries because the snapshot was pre-staged → `verify_snapshot` 8 files → `from_pretrained` on CPU → `fetch_corpus` served from the pre-staged cache after its digest checks → 1,992 + 619 + 618 papers read, 300 / 50 / 100 drawn with `check_split_disjoint` clean and digests `5fc73d14…` / `4693cd21…` / `55db9c45…` → four dataset refusals → input manifest + `num_beams` refusal probe → `summarize` under the pinned defaults (81 tokens, `eos`, 3.5 s) and TL;DR settings (46 tokens, 1.8 s) with every sanity check `True` → Lead-1/Lead-3 → frozen evaluation → `adapt` → validation + test evaluation → four unseen abstracts → adapter export → reload parity) | 746.4 s | **PASSED** — 11/11 code cells; Lead-1 ROUGE-1/2/L 29.45 / 11.23 / 23.61, Lead-3 26.76 / 10.38 / 19.86; frozen test 33.53 / 14.67 / 25.52 at 35.0 words against 17.7-word references (178.3 s, 0 at the token ceiling); `adapt` 33,593,344 of 406,290,432 params, 300 abstracts, 2 epochs, 353.1 s, validation ROUGE-L 24.19 → 29.49 → 32.28 (`best_epoch` 2, train loss 2.608 → 2.294); **adapted test 39.17 / 21.34 / 34.28 at 19.8 words (Δ +5.64 / +6.66 / +8.76)**; four unseen abstracts 56.18 / 36.20 / 47.64 `measured-small-sample`, single-document report `sample-sanity`; adapter 134,379,512 B / 52 tensors, SHA-256 `17fc98c3…`; reload parity 4/4; six exports written. Pre-flight; hosted clean-runtime run still required |
 
 ## Current status
 
