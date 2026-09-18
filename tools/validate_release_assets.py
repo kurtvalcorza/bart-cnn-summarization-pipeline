@@ -23,33 +23,61 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "bart_summarization_pipeline"
 REPO_NAME = "bart-cnn-summarization-pipeline"
 NOTEBOOK_NAME = "bart_summarization_colab.ipynb"
-EXPECTED_PROFILE = "TASK-INFERENCE"
+EXPECTED_PROFILE = "E2E"
 EXPECTED_MODEL_ID = "facebook/bart-large-cnn"
 PIPELINE_CLASS = "BARTSummarizationPipeline"
-# Additional 40-hex revisions a document may legitimately cite (none by default).
-KNOWN_SHAS: frozenset[str] = frozenset(())
-# Colab form gates that must default to the non-interactive sample path.
+MODEL_LOAD_EXPR = f"{PIPELINE_CLASS}.from_pretrained(weights_dir=WEIGHTS_DIR)"
+KNOWN_SHAS: frozenset[str] = frozenset(("5ccad9c00a60ad75c9e04abf7f27d0f53f983b20",))  # the pinned allenai/scitldr corpus commit
 BYOD_GATES = ("USE_BYOD",)
-# Machine-readable artifacts the notebook must write (OUT1-OUT3, DAT24, EVAL21).
 EXPECTED_OUTPUTS = (
+    "outputs/bart_summarization_train.csv",
     "outputs/bart_summarization_input_manifest.json",
     "outputs/bart_summarization_evaluation_report.json",
-    "outputs/bart_summarization_result.json",
     "outputs/bart_summarization_summaries.csv",
+    "outputs/bart_summarization_adapter",
+    "outputs/bart_summarization_result.json",
 )
-# Profile-specific code the notebook must exercise through the carried module's public API.
 CODE_MARKERS = (
-    "input_manifest = validate_inputs([document], max_new_tokens=SUMMARY_MAX_NEW_TOKENS, num_beams=NUM_BEAMS, names=[document_id])",
-    "validate_inputs([document], max_new_tokens=SUMMARY_MAX_NEW_TOKENS, num_beams=MAX_NUM_BEAMS + 1)",
-    "result = pipe.summarize(document, max_new_tokens=SUMMARY_MAX_NEW_TOKENS, num_beams=NUM_BEAMS)",
-    "short_result = pipe.summarize(document, max_new_tokens=60, min_new_tokens=20, num_beams=NUM_BEAMS)",
-    "report = evaluation_report(result, None, sample_kind=sample_kind)",
+    # Stage 4: pinned corpus, validation, disjoint split, CSV, refusal probes
+    "USE_BYOD = False",
+    "corpus = read_corpus(fetch_corpus(cache_dir='weights/scitldr'))",
+    "splits = build_sample_dataset(corpus, seed=SPLIT_SEED)",
+    "records = load_byod_dataset(byod_path)",
+    "dataset_manifests = {name: validate_dataset(part) for name, part in splits.items()}",
+    "disjoint = check_split_disjoint(splits)",
+    "write_dataset_csv(train_records, 'outputs/bart_summarization_train.csv')",
+    # Stage 5: the inference contract with its manifest, rejection probe, sanity checks and TL;DR settings
+    "input_manifest = validate_inputs([document], num_beams=NUM_BEAMS, names=[document_id])",
+    "validate_inputs([document], num_beams=MAX_NUM_BEAMS + 1)",
+    "result = pipe.summarize(document, num_beams=NUM_BEAMS)",
+    "tldr_result = pipe.summarize(document, **TLDR)",
     "ceilings = {'MAX_TEXT_CHARS': MAX_TEXT_CHARS, 'MAX_INPUT_TOKENS': MAX_INPUT_TOKENS, 'MAX_NEW_TOKENS': MAX_NEW_TOKENS, 'MAX_NUM_BEAMS': MAX_NUM_BEAMS, 'LENGTH_PENALTY_RANGE': LENGTH_PENALTY_RANGE, 'MAX_NO_REPEAT_NGRAM_SIZE': MAX_NO_REPEAT_NGRAM_SIZE}",
     "'defaults_from': GENERATION_CONFIG_FILE",
     "'truncated_matches_stopped_by': result['truncated'] == (result['stopped_by'] != 'eos')",
     "'deterministic_decoding': result['generation']['do_sample'] is False",
-    "writer.writerow(['document_id', 'run', 'max_new_tokens', 'min_new_tokens', 'num_beams', 'length_penalty', 'no_repeat_ngram_size', 'generated_tokens', 'input_tokens', 'truncated', 'stopped_by', 'summary'])",
-    "'decoding': 'deterministic beam search (do_sample=False); no score, probability or quality metric is emitted; truncated is a length flag; no threshold shipped'",
+    # Stage 6: Lead baselines and the frozen model on the test split
+    "baseline_lead1 = lead_baseline(test_records, n_sentences=1)",
+    "baseline_lead3 = lead_baseline(test_records, n_sentences=3)",
+    "frozen_test = pipe.evaluate(test_records, **TLDR)",
+    # Stage 7: bounded fine-tuning with explicit hyperparameters
+    "adapt_result = pipe.adapt(",
+    "trainable_decoder_layers=TRAINABLE_DECODER_LAYERS",
+    "lr=LEARNING_RATE",
+    "eval_generation=TLDR",
+    # Stage 8: held-out evaluation, comparison, assertion
+    "adapted_test = pipe.evaluate(test_records, **TLDR)",
+    "adapted_val = pipe.evaluate(val_records, **TLDR)",
+    "'delta_vs_frozen'",
+    "assert adapted_test['rougeL'] > frozen_test['rougeL']",
+    # Stage 9: new abstracts, single-document report, artifact, reload parity, provenance
+    "new_metrics = pipe.evaluate(new_records, **TLDR)",
+    "single_report = evaluation_report(",
+    "pipe.save_artifact(artifact_dir, metadata=",
+    "reloaded = BARTSummarizationPipeline.from_artifact(artifact_dir, weights_dir=WEIGHTS_DIR, device=pipe.device)",
+    "assert parity['identical_summaries'] == parity['of']",
+    "weight_entry = next(entry for entry in snapshot['files'] if entry['path'] == WEIGHT_FILE)",
+    "'weight_format': 'safetensors, digest-verified'",
+    "'corpus': {'name': CORPUS_NAME, 'release': CORPUS_RELEASE, 'base_url': CORPUS_BASE_URL",
     "'model_revision': MODEL_REVISION",
     "'model_license': MODEL_LICENSE",
     "transformers.__version__",
@@ -58,16 +86,18 @@ CODE_MARKERS = (
 # Profile-specific learner-facing statements.
 MARKDOWN_MARKERS = (
     "**Capability:** abstractive summarization of one English document by deterministic beam search",
-    "**No adaptation occurs:**",
+    "and bounded supervised fine-tuning of the last decoder blocks",
     "**The pipeline emits no score, probability or quality metric**",
     "**deterministic beam search**",
-    "**no ROUGE or other metric helper and reports no performance measure**",
-    "the verdict is always `not-measurable`",
-    "**rejects** longer documents rather than truncating or chunking them",
+    "**adaptation with references**",
+    "**out of domain**",
+    "**Lead baselines**",
+    "**Length note:**",
+    "rouge-score-style, not rouge-score-identical",
+    "no dispersion estimate",
+    "**rejects with a `ValueError` naming the count, never truncates or chunks**",
     "extractive summarization with guaranteed source spans, multi-document or long-document (chunked) summarization",
-    "**Input/output contract.** `summarize(text, max_new_tokens=..., min_new_tokens=..., num_beams=...",
-    "**No score is emitted:**",
-    "never benchmark evidence",
+    "Apache-2.0 (Cachola et al., 2020)",
 )
 # Direct-library use that must stay inside the carried module cell (G2: the notebook calls the
 # pipeline API, it does not reimplement it). Checked on every code cell except the embedded one.
@@ -80,6 +110,13 @@ FORBIDDEN_OUTSIDE_MODULE = (
     "BartTokenizerFast",
     "BartForConditionalGeneration",
     ".generate(",
+    "urllib.request",
+    "from safetensors",
+    "load_file(",
+    "save_file(",
+    ".backward(",
+    "torch.optim",
+    "pipe._model",
 )
 
 # ---------------------------------------------------------------------------
@@ -152,7 +189,7 @@ COMMON_MARKDOWN_MARKERS = (
     "**Learning objectives:**",
     "## Prerequisites",
     "Do not upload confidential or restricted",
-    "- **External access:** the Hugging Face Hub only",
+    "- **External access:** the Hugging Face Hub",
     "## 1. Install the pinned runtime",
     "## 2. Pipeline code (carried verbatim from",
     "## 3. Pin, stage and verify the model",
@@ -173,7 +210,12 @@ FORBIDDEN_PATTERNS = (
     ("trust_remote_code enabled", re.compile(r"trust_remote_code\s*[=:]\s*True")),
     (
         "unsafe deserialization",
-        re.compile(r"\bpickle\.load|\btorch\.load\s*\(|getattr\(\s*torch\s*,\s*['\"]load['\"]"),
+        re.compile(
+            r"\bpickle\.load"
+            r"|\btorch\.load\s*\((?![^)]*weights_only\s*=\s*True)"
+            r"|weights_only\s*=\s*False"
+            r"|getattr\(\s*torch\s*,\s*['\"]load['\"]"
+        ),
     ),
     ("archive extractall", re.compile(r"\.extractall\s*\(")),
     ("notebook magic or shell escape", re.compile(r"(?m)^\s*[%!]|get_ipython\(\)")),
@@ -348,13 +390,16 @@ def _validate_notebook_structure(path: Path, notebook: dict) -> tuple[list[tuple
     _check(dimer.get("notebook_mode") in ("REFERENCE", "GUIDED", "WORKSHOP"), f"{path.name}: metadata.dimer.notebook_mode must declare a §3.3 pedagogical mode")
     _check(dimer.get("standalone") is True, f"{path.name}: metadata.dimer.standalone must be true (ST6)")
     generated = dimer.get("generated_from")
+    _template = _load_tool("notebook_template").TEMPLATE
     _check(isinstance(generated, dict), f"{path.name}: metadata.dimer.generated_from is required (ST5)")
     _check(generated.get("repository") == REPO_NAME, f"{path.name}: generated_from.repository must be {REPO_NAME}")
     _check(
-        generated.get("module") == f"src/{PACKAGE}/pipeline.py",
-        f"{path.name}: generated_from.module must be src/{PACKAGE}/pipeline.py",
+        generated.get("module") == f"{_template.get('package_dir', f'src/{PACKAGE}')}/{_template.get('entry_module', 'pipeline.py')}",
+        f"{path.name}: generated_from.module must name the template entry module",
     )
-    module_sha = hashlib.sha256(_read(ROOT / "src" / PACKAGE / "pipeline.py").encode("utf-8")).hexdigest()
+    _pkg_dir = ROOT / _template.get("package_dir", f"src/{PACKAGE}")
+    _order = _load_tool("build_notebook")._module_order(_pkg_dir, list(_template.get("modules", ["pipeline.py"])))
+    module_sha = hashlib.sha256("".join(_read(_pkg_dir / m) for m in _order).encode("utf-8")).hexdigest()
     _check(
         generated.get("module_sha256") == module_sha,
         f"{path.name}: generated_from.module_sha256 does not match src/ (PAR4: regenerate the notebook)",
@@ -425,38 +470,47 @@ def _validate_gates(path: Path, code_cells: list[tuple[int, str, ast.Module]]) -
                 )
 
 
-def _validate_embedded_module(path: Path, notebook: dict, build) -> int:
-    """PAR1: exactly one tagged cell, equal to the module after the documented rewrites."""
+def _validate_embedded_modules(path: Path, notebook: dict, build) -> list[int]:
+    """PAR1: one tagged cell per carried module, in dependency order, each equal to its module after
+    the documented rewrites (generator /2 multi-module carrier; ST2 applied per module)."""
     tagged = [
         (index, cell)
         for index, cell in enumerate(notebook.get("cells", []))
         if cell.get("cell_type") == "code" and cell.get("metadata", {}).get("dimer", {}).get("embedded_module")
     ]
-    _check(len(tagged) == 1, f"{path.name}: exactly one cell must be tagged metadata.dimer.embedded_module (ST2)")
-    index, cell = tagged[0]
+    template = _load_tool("notebook_template").TEMPLATE
+    recorded = notebook["metadata"]["dimer"]["generated_from"]["revision"]
+    context = build.load_context(ROOT, template, recorded)
+    expected_rels = context["module_rels"]
     _check(
-        cell["metadata"]["dimer"]["embedded_module"] == f"src/{PACKAGE}/pipeline.py",
-        f"{path.name}: embedded_module tag must name src/{PACKAGE}/pipeline.py",
+        [cell["metadata"]["dimer"]["embedded_module"] for _, cell in tagged] == expected_rels,
+        f"{path.name}: the cells tagged metadata.dimer.embedded_module must be exactly {expected_rels}, in order (ST2)",
     )
-    expected = build.apply_rewrites(_read(ROOT / "src" / PACKAGE / "pipeline.py"))
-    _check(
-        _cell_source(cell).rstrip("\n") + "\n" == expected,
-        f"{path.name}: embedded module differs from src/{PACKAGE}/pipeline.py (PAR1); regenerate the notebook",
-    )
-    return index
+    for (index, cell), module, rel in zip(
+        tagged, context["modules"], context["module_rels"], strict=True
+    ):
+        _check(
+            cell["metadata"]["dimer"].get("module_sha256") == context["per_module_sha256"][rel],
+            f"{path.name}: cell {index} module_sha256 tag does not match {rel}",
+        )
+        _check(
+            _cell_source(cell).rstrip("\n") + "\n" == context["embedded"][module],
+            f"{path.name}: embedded module cell {index} differs from {rel} (PAR1); regenerate the notebook",
+        )
+    return [index for index, _ in tagged]
 
 
 def _validate_identity(
-    path: Path, code_cells: list[tuple[int, str, ast.Module]], embedded_index: int, revision: str
+    path: Path, code_cells: list[tuple[int, str, ast.Module]], embedded: list[int], revision: str
 ) -> None:
     """Identity constants are bound in the carried module only; nothing outside rebinds them."""
     for index, _source, tree in code_cells:
-        if index == embedded_index:
+        if index in embedded:
             continue
         for node in ast.walk(tree):
             rebound = [name for name in _assignment_targets(node) if name in IDENTITY_NAMES]
             _check(not rebound, f"{path.name}: {rebound} must not be rebound outside the module cell (cell {index})")
-    outside = "\n".join(source for index, source, _ in code_cells if index != embedded_index)
+    outside = "\n".join(source for index, source, _ in code_cells if index not in embedded)
     manifest_block = re.search(r"^MANIFEST = (\{.*?^\})$", outside, re.M | re.S)
     _check(manifest_block is not None, f"{path.name}: model cell must carry an inline MANIFEST literal (ST3)")
     outside_without_manifest = outside.replace(manifest_block.group(0), "")
@@ -497,12 +551,12 @@ def _validate_bootstrap_guard(path: Path, code_cells: list[tuple[int, str, ast.M
 
 
 def _validate_notebook_content(
-    path: Path, code_cells: list[tuple[int, str, ast.Module]], markdown: str, embedded_index: int
+    path: Path, code_cells: list[tuple[int, str, ast.Module]], markdown: str, embedded: list[int]
 ) -> None:
     model_id, _revision = _package_identity()
     stripped = {index: _strip_comments(source) for index, source, _ in code_cells}
     code = "\n".join(stripped.values())
-    outside = "\n".join(text for index, text in stripped.items() if index != embedded_index)
+    outside = "\n".join(text for index, text in stripped.items() if index not in embedded)
     missing = [marker for marker in COMMON_CODE_MARKERS + CODE_MARKERS if marker not in code]
     _check(not missing, f"{path.name}: missing required source markers: {missing}")
     present = [label for label, pattern in FORBIDDEN_PATTERNS if pattern.search(code)]
@@ -510,8 +564,8 @@ def _validate_notebook_content(
     leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in outside]
     _check(not leaked, f"{path.name}: direct library use outside the carried module cell (G2): {leaked}")
     _check(
-        f"pipe = {PIPELINE_CLASS}.from_pretrained(weights_dir=WEIGHTS_DIR)" in outside,
-        f"{path.name}: must load through {PIPELINE_CLASS}.from_pretrained(weights_dir=WEIGHTS_DIR) (INF1)",
+        f"pipe = {MODEL_LOAD_EXPR}" in outside,
+        f"{path.name}: must load through {MODEL_LOAD_EXPR} (INF1)",
     )
     _validate_gates(path, code_cells)
     _validate_bootstrap_guard(path, code_cells)
@@ -532,11 +586,11 @@ def validate_notebooks() -> None:
     build = _load_tool("build_notebook")
     notebook = json.loads(_read(path))
     code_cells, markdown = _validate_notebook_structure(path, notebook)
-    embedded_index = _validate_embedded_module(path, notebook, build)
+    embedded = _validate_embedded_modules(path, notebook, build)
     _model_id, revision = _package_identity()
-    _validate_identity(path, code_cells, embedded_index, revision)
+    _validate_identity(path, code_cells, embedded, revision)
     _validate_parity(path, notebook, code_cells, build)
-    _validate_notebook_content(path, code_cells, markdown, embedded_index)
+    _validate_notebook_content(path, code_cells, markdown, embedded)
     registry = _read(tutorials / "README.md")
     _check(f"`{path.name}`" in registry, f"{path.name} missing from tutorials/README.md")
     _check(f"`{EXPECTED_PROFILE}`" in registry, f"tutorials/README.md must record `{EXPECTED_PROFILE}`")

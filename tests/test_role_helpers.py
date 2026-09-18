@@ -90,7 +90,7 @@ def test_validate_inputs_rejects_like_the_core_method() -> None:
         validate_inputs([DOC], names=["a", "b"])
 
 
-def test_evaluation_report_is_always_not_measurable() -> None:
+def test_evaluation_report_is_not_measurable_without_references() -> None:
     report = evaluation_report(_result())
     assert report["verdict"] == "not-measurable"
     assert report["metrics"] == []
@@ -105,13 +105,17 @@ def test_evaluation_report_is_always_not_measurable() -> None:
     assert (report["model_id"], report["model_revision"]) == (MODEL_ID, MODEL_REVISION)
 
 
-def test_evaluation_report_stays_not_measurable_when_references_are_supplied() -> None:
-    report = evaluation_report(
-        _result(141, "max_new_tokens"), ["a reference summary"], sample_kind="BYOD upload"
-    )
-    assert report["verdict"] == "not-measurable"
-    assert report["metrics"] == []
+def test_evaluation_report_scores_one_document_as_sample_sanity() -> None:
+    result = {**_result(141, "max_new_tokens"), "summary": "the council approved the plan"}
+    report = evaluation_report(result, ["the council approved the plan", "other"], sample_kind="BYOD upload")
+    assert report["verdict"] == "sample-sanity"
+    assert {m["id"]: m["value"] for m in report["metrics"]} == {
+        "rouge1": 100.0,
+        "rouge2": 100.0,
+        "rougeL": 100.0,
+    }
     assert report["truncated"] is True
     assert report["sample_kind"] == "BYOD upload"
-    assert "reference summaries were supplied" in report["reason"]
-    assert "one reference is not a dispersion" in report["reason"]
+    assert "single document" in report["reason"]
+    with pytest.raises(ValueError, match="at least one non-empty"):
+        evaluation_report(result, [" "])
