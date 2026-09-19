@@ -8,11 +8,11 @@ import hashlib
 import json
 
 import pytest
-import torch
 
 from bart_summarization_pipeline import DEFAULT_WEIGHTS_DIR, WEIGHT_FILE, BARTSummarizationPipeline
 
 pytest.importorskip("transformers")
+torch = pytest.importorskip("torch")
 if not (DEFAULT_WEIGHTS_DIR / WEIGHT_FILE).is_file():
     pytest.skip("snapshot not staged", allow_module_level=True)
 
