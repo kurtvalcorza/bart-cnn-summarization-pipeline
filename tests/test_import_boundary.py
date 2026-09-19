@@ -2,6 +2,7 @@
 
 Rejected requests never import model libraries; valid snapshots still reach them.
 """
+
 import hashlib
 import json
 
@@ -30,22 +31,16 @@ def _snapshot(root, tamper=False):
 
 def test_from_pretrained_refuses_without_snapshot_before_model_imports(tmp_path, forbid_model_imports):
     with pytest.raises(FileNotFoundError, match="allow_download=False"):
-        BARTSummarizationPipeline.from_pretrained(
-            device="cpu", weights_dir=tmp_path, allow_download=False
-        )
+        BARTSummarizationPipeline.from_pretrained(device="cpu", weights_dir=tmp_path, allow_download=False)
 
 
 def test_from_pretrained_refuses_tampered_snapshot_before_model_imports(tmp_path, forbid_model_imports):
     _snapshot(tmp_path, tamper=True)
     with pytest.raises(ValueError, match="sha256"):
-        BARTSummarizationPipeline.from_pretrained(
-            device="cpu", weights_dir=tmp_path, allow_download=False
-        )
+        BARTSummarizationPipeline.from_pretrained(device="cpu", weights_dir=tmp_path, allow_download=False)
 
 
 def test_from_pretrained_valid_snapshot_reaches_model_import(tmp_path, forbid_model_imports):
     _snapshot(tmp_path)
     with pytest.raises(AssertionError, match="model dependency imported before rejection"):
-        BARTSummarizationPipeline.from_pretrained(
-            device="cpu", weights_dir=tmp_path, allow_download=False
-        )
+        BARTSummarizationPipeline.from_pretrained(device="cpu", weights_dir=tmp_path, allow_download=False)
