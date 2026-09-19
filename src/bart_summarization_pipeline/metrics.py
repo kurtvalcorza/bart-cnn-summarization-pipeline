@@ -99,7 +99,10 @@ def summary_metrics(hypotheses: Sequence[str], references: Sequence[Sequence[str
         "rouge2": 100.0 * sum(d["rouge2"] for d in per_doc) / len(per_doc),
         "rougeL": 100.0 * sum(d["rougeL"] for d in per_doc) / len(per_doc),
         "mean_summary_words": sum(len(h.split()) for h in hypotheses) / len(hypotheses),
-        "mean_reference_words": sum(len(r[0].split()) for r in references) / len(references),
+        # averaged over every reference of every document — the same population the ROUGE terms are scored
+        # against, not only each document's first reference
+        "mean_reference_words": sum(len(x.split()) for refs in references for x in refs)
+        / sum(len(refs) for refs in references),
         "definitions": dict(METRIC_DEFINITIONS),
     }
 

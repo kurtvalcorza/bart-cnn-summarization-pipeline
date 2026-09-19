@@ -464,3 +464,10 @@ def test_load_artifact_refuses_unsupported_versions_extra_files_and_traversal(tm
     write(good)  # every manifest check passes; the weights file is still missing, and no model was imported
     with pytest.raises(FileNotFoundError, match="artifact weights missing"):
         pipe.load_artifact(tmp_path)
+
+
+def test_mean_reference_words_averages_over_every_reference(forbid_model_imports):
+    from bart_summarization_pipeline.metrics import summary_metrics
+
+    metrics = summary_metrics(["a b c", "d e"], [["one two", "three four five six"], ["seven"]])
+    assert metrics["mean_summary_words"] == 2.5 and metrics["mean_reference_words"] == (2 + 4 + 1) / 3
