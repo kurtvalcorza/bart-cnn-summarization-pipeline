@@ -182,6 +182,19 @@ def _check_text(text: Any, name: str = "text") -> str:
     return text
 
 
+def _stopped_by(decoder_ids: Sequence[int], eos_token_id: int, max_new_tokens: int) -> str:
+    """Why generation stopped, decided from the generated decoder ids (``decoder_ids[0]`` is the decoder
+    start token, so ``len(decoder_ids) - 1`` decoder steps ran).
+
+    The pinned config sets ``forced_eos_token_id``: when generation reaches ``max_new_tokens``, transformers
+    forces EOS as the last token, so the presence of EOS cannot tell a natural stop from a cut. A sequence
+    that used every allowed step is therefore reported as ``max_new_tokens`` (truncated), whatever its last
+    token; only a sequence that ended with EOS before the cap stopped by ``eos``."""
+    if len(decoder_ids) - 1 >= max_new_tokens:
+        return "max_new_tokens"
+    return "eos" if eos_token_id in decoder_ids[1:] else "max_new_tokens"
+
+
 def _check_input_tokens(n_input: int) -> int:
     """The encoder-token ceiling, applied once the tokenizer has counted."""
     if n_input > MAX_INPUT_TOKENS:
@@ -375,7 +388,7 @@ class BARTSummarizationPipeline:
                 )
             ids = out[0].tolist()
             content = [t for t in ids[1:] if t not in special]  # ids[0] is the decoder start token
-            stopped_by = "eos" if tokenizer.eos_token_id in ids[1:] else "max_new_tokens"
+            stopped_by = _stopped_by(ids, tokenizer.eos_token_id, settings["max_new_tokens"])
             return tokenizer.decode(content, skip_special_tokens=True).strip(), len(content), stopped_by
 
         return cls(runner, count_tokens, resolved_device, source, _model=model, _tokenizer=tokenizer)
@@ -480,9 +493,18 @@ class BARTSummarizationPipeline:
         at 1.0, sources truncated to MAX_TRAIN_SOURCE_TOKENS and targets to MAX_TRAIN_TARGET_TOKENS
         **during training only**. Epoch 0 records the frozen model's validation ROUGE; every epoch is scored
         on the validation split with `eval_generation` (the pipeline defaults unless given), and the epoch
-        with the highest validation ROUGE-L is kept."""
+        with the highest validation ROUGE-L is kept.
+
+        Training starts from the model's current weights, so an already-adapted pipeline is refused:
+        adapting it again would stack a second fine-tuning on the first while epoch 0 is labelled the frozen
+        model. Build a new pipeline with ``from_pretrained`` to start again from the pinned base."""
         from .samples import validate_dataset
 
+        if self.adapter is not None:
+            raise ValueError(
+                "this pipeline is already adapted; adapt() would train on top of that adaptation. "
+                "Build a new pipeline with from_pretrained() to start again from the pinned base weights"
+            )
         if not isinstance(epochs, int) or not 1 <= epochs <= 20:
             raise ValueError("epochs must be an int in 1..20")
         if not (0.0 < lr <= 1e-3):
