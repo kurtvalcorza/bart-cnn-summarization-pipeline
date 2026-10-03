@@ -79,7 +79,7 @@ print(pipe.summarize("<a few paragraphs of English prose>")["summary"])
 
 ## Release status
 
-**Candidate** — the notebook was regenerated in the isolated-environment pattern to fix review findings BART-M1..M5 / BART-m1..m7, and no hosted run of the new blob exists yet. The 2026-09-19 Kaggle T4 run of the previous blob `e0501a20` needed a restart after the install cell (2 passes), which is not a one-pass `Run all`; see `docs/release-verification.md` and `STATUS.md`. Static and unit checks — including the standalone generator parity checks — are necessary but never the evidence; a one-pass hosted run of the current blob is.
+**Candidate** — the notebook was regenerated in the isolated-environment pattern to fix review findings BART-M1..M5 / BART-m1..m7, and a hosted Colab T4 run of the new blob (commit `a7b0694`) completed the default path in one pass with no restart and 0 errors on 2026-10-03; the BYOD and activity runs and an explicit promotion decision remain. The 2026-09-19 Kaggle T4 run of the previous blob `e0501a20` needed a restart after the install cell (2 passes), which is not a one-pass `Run all`; see `docs/release-verification.md` and `STATUS.md`. Static and unit checks — including the standalone generator parity checks — are necessary but never the evidence; a one-pass hosted run of the current blob is, and one is now recorded.
 
 ## Documents
 
