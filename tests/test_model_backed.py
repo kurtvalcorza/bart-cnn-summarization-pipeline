@@ -94,8 +94,10 @@ RECORDS = [{"id": f"p{i:02d}", "source": s, "targets": [t]} for i, (s, t) in enu
 GEN = {"max_new_tokens": 32, "min_new_tokens": 0, "num_beams": 2}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipe():
+    # A new pipeline per test: adapt() refuses an already-adapted pipeline (BART-M3), so no test may inherit
+    # another test's adaptation.
     return BARTSummarizationPipeline.from_pretrained(device="cpu")
 
 
@@ -195,3 +197,26 @@ def test_adapt_is_transactional_when_the_progress_callback_raises(pipe):
     after = pipe._model.state_dict()
     assert all(torch.equal(before[k], after[k]) for k in before) and pipe.adapter is None
     assert not any(p.requires_grad for p in pipe._model.parameters())
+
+
+def test_a_second_adapt_on_the_same_pipeline_is_refused(pipe):
+    """BART-M3: adapt() trains from the current weights, so adapting twice would stack two fine-tunings while
+    epoch 0 is labelled the frozen model; the second call is refused before any training."""
+    pipe.adapt(RECORDS[:8], None, epochs=1, trainable_decoder_layers=1, batch_size=4, eval_generation=GEN)
+    before = {k: v.clone() for k, v in pipe._model.state_dict().items()}
+    with pytest.raises(ValueError, match="already adapted"):
+        pipe.adapt(RECORDS[:8], None, epochs=1, trainable_decoder_layers=1, batch_size=4, eval_generation=GEN)
+    after = pipe._model.state_dict()
+    assert all(torch.equal(before[k], after[k]) for k in before)
+
+
+def test_a_summary_cut_at_the_cap_is_reported_as_truncated(pipe):
+    """BART-M2 on the real checkpoint: the pinned config forces EOS at the cap, so a summary that reaches
+    max_new_tokens ends with EOS; it must still be reported as truncated, with max_new_tokens - 2 content
+    tokens."""
+    document = " ".join(source for source, _target in PAPERS[:6])
+    cut = pipe.summarize(document, max_new_tokens=12, min_new_tokens=0, num_beams=2)
+    assert cut["truncated"] is True and cut["stopped_by"] == "max_new_tokens"
+    assert cut["generated_tokens"] == 10
+    free = pipe.summarize(document, max_new_tokens=141, min_new_tokens=0, num_beams=2)
+    assert free["stopped_by"] == "eos" and free["truncated"] is False and free["generated_tokens"] < 139

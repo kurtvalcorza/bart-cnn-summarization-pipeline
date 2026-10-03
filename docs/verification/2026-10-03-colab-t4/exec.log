@@ -1,0 +1,109 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/bart-cnn-summarization-pipeline-a7b0694-9e8965/bart_summarization_colab_a7b0694_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/14 - Infrastructure: check the runtime and disk; create a fresh run directory...
+{'gpu': 'Tesla T4, 15360 MiB', 'kernel_python': '3.13.15', 'run_directory': '/content/outputs/bart_summarization/74ee3249069a', 'weights': '/content/weights', 'environment': '/tmp/bart_summarization_env_74ee3249069a', 'free_gib': {'weights': 193.2, 'environment': 193.2}}
+[colab] Executing cell 2/14 - Infrastructure: write and verify the carried package, stage runner, lock and manifests...
+{'carried_files': 9, 'verified': True, 'repository': 'kurtvalcorza/bart-cnn-summarization-pipeline', 'revision': '4e3cdaf499ba2e6d02dd3421e8e070807bf23961', 'generator': 'build_notebook.py/3.0'}
+[colab] Executing cell 3/14 - Infrastructure: install the locked runtime into an isolated environment and define the stage runner...
+{'notebook_source': '4e3cdaf499ba2e6d02dd3421e8e070807bf23961', 'python': '3.12.12', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'cuda': True, 'locked_packages': 47, 'environment': '/tmp/bart_summarization_env_74ee3249069a/venv', 'setup_seconds': 64}
+[colab] Executing cell 4/14 - Infrastructure: stage and digest-verify the pinned snapshot...
+Running stage 'weights' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/weights.log
+{'model_id': 'facebook/bart-large-cnn', 'revision': '37f520fa929c961707657b28798b30c003dd100b', 'license': 'mit', 'files': 8, 'total_bytes': 1627941444}
+{'weights_dir': '/content/weights/bart-large-cnn', 'fetched': ['README.md', 'config.json', 'generation_config.json', 'generation_config_for_summarization.json', 'merges.txt', 'model.safetensors', 'tokenizer.json', 'vocab.json']}
+{'verified_files': 8, 'revision': '37f520fa929c961707657b28798b30c003dd100b'}
+{'stage': 'weights', 'status': 'ok', 'seconds': 23.7}
+[colab] Executing cell 5/14 - bart_summarization-18...
+Running stage 'runtime' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/runtime.log
+{'python': '3.12.12', 'versions_match_lock': True, 'device': 'cuda:0', 'gpu': 'Tesla T4', 'float': 'float32'}
+{'versions': {'torch': '2.14.0', 'transformers': '4.57.6', 'tokenizers': '0.22.2', 'safetensors': '0.8.0', 'huggingface-hub': '0.36.2', 'numpy': '2.5.3'}}
+{'ceilings': {'MAX_TEXT_CHARS': 40000, 'MAX_INPUT_TOKENS': 1024, 'MAX_NEW_TOKENS': 512, 'MAX_NUM_BEAMS': 8, 'LENGTH_PENALTY_RANGE': (-5.0, 5.0), 'MAX_NO_REPEAT_NGRAM_SIZE': 10}}
+{'pinned_defaults_from': 'generation_config_for_summarization.json', 'DEFAULT_MAX_NEW_TOKENS': 141, 'DEFAULT_MIN_NEW_TOKENS': 55, 'DEFAULT_NUM_BEAMS': 4, 'DEFAULT_LENGTH_PENALTY': 2.0, 'DEFAULT_NO_REPEAT_NGRAM_SIZE': 3, 'EARLY_STOPPING': True}
+{'decision_rule': 'deterministic beam search (do_sample=False, early_stopping=True): the highest length-penalised log-probability beam is returned; no sampling, no seed'}
+{'stage': 'runtime', 'status': 'ok', 'seconds': 2.6}
+[colab] Executing cell 6/14 - bart_summarization-20...
+Running stage 'data' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/data.log
+{'data_source': 'SciTLDR-A (allenai/scitldr @ 5ccad9c00a60ad75c9e04abf7f27d0f53f983b20; Apache-2.0 (Cachola et al. 2020; allenai/scitldr))', 'raw_records': {'train': 1992, 'dev': 619, 'test': 618}, 'splits': {'train': 300, 'validation': 50, 'test': 100}, 'new_documents': 4, 'new_documents_are': 'unseen SciTLDR dev abstracts (in none of the splits)'}
+{'file_sha256': {'train': 'b222771d387b...', 'dev': '3191fa98ccc0...', 'test': 'fb42dd6cd4f4...'}}
+{'train': {'n': 300, 'unique_sources': 300, 'references_per_record': {'min': 1, 'max': 1}, 'source_chars': {'min': 345, 'max': 2189}, 'target_words': {'min': 6, 'max': 80}, 'digest': '1ecede327b72d23a...'}}
+{'validation': {'n': 50, 'unique_sources': 50, 'references_per_record': {'min': 1, 'max': 4}, 'source_chars': {'min': 414, 'max': 1816}, 'target_words': {'min': 5, 'max': 39}, 'digest': '4693cd217ffb9cf3...'}}
+{'test': {'n': 100, 'unique_sources': 100, 'references_per_record': {'min': 2, 'max': 4}, 'source_chars': {'min': 341, 'max': 1977}, 'target_words': {'min': 5, 'max': 35}, 'digest': '55db9c45f20dbbbe...'}}
+{'token_ceilings': {'MAX_INPUT_TOKENS': 1024, 'MAX_TRAIN_SOURCE_TOKENS': 512, 'train': {'max_tokens': 423, 'truncated_during_training': 0}, 'validation': {'max_tokens': 346}, 'test': {'max_tokens': 382}, 'new': {'max_tokens': 176}}}
+{'example': {'id': 'train-0000', 'source': 'We present a method for policy learning to navigate indoor environments. We adopt a hierarchical policy approach, where two agents are trained to work in cohesion with one another to perform a complex...', 'targets': ['We present a hierarchical learning framework for navigation within an embodied learning setting']}}
+{'probe': 'duplicate id', 'rejected': "duplicate id 'same'"}
+{'probe': 'empty reference list', 'rejected': 'records[0]: targets must be a non-empty list of reference summaries'}
+{'probe': 'missing field', 'rejected': "records[0] is missing 'targets'"}
+{'probe': 'too few for this workflow', 'rejected': '11 records, 11 with distinct sources (0 duplicate sources dropped): the split would give train 7 / validation 2 / test 2, but the workflow needs at least 8 training records and 1 validation record, i.e. at least 12 records with distinct sou'}
+{'probe': 'over-long test source (1132 tokens)', 'rejected': "test record 'long-test' has 1132 tokens; MAX_INPUT_TOKENS is 1024 and inference never truncates. Shorten or remove it, then re-run from Section 5 (1 test record(s) are over the ceiling)"}
+{'stage': 'data', 'status': 'ok', 'seconds': 8.6}
+[colab] Executing cell 7/14 - bart_summarization-23...
+Running stage 'inference' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/inference.log
+{'max_new_tokens': 141, 'generated_tokens': 81, 'content_tokens_at_cap': 139, 'truncated': False, 'stopped_by': 'eos', 'input_tokens': 232, 'seconds': 1.77, 'settings': 'pinned_news_defaults'}
+summary (pinned news defaults):
+The town council of Millbrook voted on Tuesday evening to approve a three-year plan to replace the aging water mains beneath the historic district. The plan, which had been debated for more than a year, will cost an estimated 4.2 million dollars and is scheduled to begin in the spring. The decision was driven by a series of pipe failures last winter that left several streets without water for days.
+{'max_new_tokens': 48, 'generated_tokens': 46, 'content_tokens_at_cap': 46, 'truncated': True, 'stopped_by': 'max_new_tokens', 'input_tokens': 232, 'seconds': 0.65, 'settings': 'tldr_settings'}
+summary (tldr settings):
+The town council of Millbrook voted on Tuesday evening to approve a three-year plan to replace the aging water mains beneath the historic district. The plan, which had been debated for more than a year, will cost an estimated
+{'no_score': 'the pipeline emits no probability or quality score; truncated is a length flag', 'forced_tokens_per_summary': 2, 'pinned_default_max_new_tokens': 141, 'findings': 1}
+{'stage': 'inference', 'status': 'ok', 'seconds': 13.5}
+[colab] Executing cell 8/14 - bart_summarization-26...
+Running stage 'frozen' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/frozen.log
+{'lead1_baseline': {'rouge1': 29.45, 'rouge2': 11.23, 'rougeL': 23.61, 'mean_summary_words': 20.18}, 'lead3_baseline': {'rouge1': 26.76, 'rouge2': 10.38, 'rougeL': 19.86, 'mean_summary_words': 68.29}, 'note': 'Lead baselines copy sentences; no generation settings or token cap apply to them'}
+{'frozen_model_test': {'rouge1': 33.53, 'rouge2': 14.67, 'rougeL': 25.52, 'mean_summary_words': 35.0, 'mean_reference_words': 20.3, 'n': 100, 'adapted': False, 'verdict': 'measured'}, 'seconds': 66.9, 'device': 'cuda:0'}
+{'cut_at_the_cap': '86 of 100 frozen summaries reached max_new_tokens = 48 and were cut'}
+{'id': 'test-0000', 'frozen': 'We introduce a new method for training GANs by applying the Wasserstein-2 metric proximal on the generators. The approach is based on the gradient operator induced by optimal transport. Our experiments demonstrate that this method improves the', 'truncated': True, 'reference': 'We propose the Wasserstein proximal method for training GANs.'}
+{'id': 'test-0001', 'frozen': 'Deep neural networks (DNNs) generalize remarkably well without explicit regularization even in the strongly over-parametrized regime. There is no consensus for the fundamental reason why DNNs do not strongly overfit.', 'truncated': True, 'reference': 'The parameter-function map of deep networks is hugely biased; this can explain why they generalize. We use PAC-Bayes and Gaussian processes to obtain nonvacuous bounds.'}
+{'stage': 'frozen', 'status': 'ok', 'seconds': 78.8}
+[colab] Executing cell 9/14 - bart_summarization-29...
+Running stage 'adapt' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/adapt.log
+{'starts_from': 'the pinned base model, built from the verified files in this process', 'adapted': False, 'device': 'cuda:0'}
+{'epoch': 0, 'train_loss': None, 'val_rouge1': 32.53, 'val_rouge2': 12.86, 'val_rougeL': 24.19, 'val_mean_summary_words': 35.86, 'val_cut_at_cap': 43, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 2.6177, 'val_rouge1': 37.27, 'val_rouge2': 17.6, 'val_rougeL': 31.03, 'val_mean_summary_words': 19.84, 'val_cut_at_cap': 1}
+{'epoch': 2, 'train_loss': 2.2828, 'val_rouge1': 37.41, 'val_rouge2': 17.61, 'val_rougeL': 31.93, 'val_mean_summary_words': 19.6, 'val_cut_at_cap': 0}
+{'trainable_parameters': 33593344, 'total_parameters': 406290432, 'best_epoch': 2, 'selection': 'highest validation ROUGE-L', 'seconds': 107.2, 'device': 'cuda:0'}
+{'artifact': '/content/outputs/bart_summarization/74ee3249069a/outputs/bart_summarization_adapter', 'format': 'org.valcorza.bart-large-cnn.adapter.v1', 'tensors': 52, 'bytes': 134379512, 'sha256': 'dcc9c46f5e9e9797...'}
+{'stage': 'adapt', 'status': 'ok', 'seconds': 122.5}
+[colab] Executing cell 10/14 - bart_summarization-32...
+Running stage 'evaluate' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/evaluate.log
+{'rouge1': {'lead1': 29.45, 'lead3': 26.76, 'frozen': 33.53, 'adapted': 38.71}}
+{'rouge2': {'lead1': 11.23, 'lead3': 10.38, 'frozen': 14.67, 'adapted': 20.48}}
+{'rougeL': {'lead1': 23.61, 'lead3': 19.86, 'frozen': 25.52, 'adapted': 33.62}}
+{'mean_summary_words': {'lead1': 20.18, 'lead3': 68.29, 'frozen': 35.0, 'adapted': 19.55}}
+{'cut_at_cap': {'lead1': None, 'lead3': None, 'frozen': 86, 'adapted': 2}}
+{'delta_adapted_vs_frozen': {'rouge1': 5.18, 'rouge2': 5.81, 'rougeL': 8.1}}
+{'id': 'test-0000', 'adapted': 'We introduce a new method for training GANs by applying the Wasserstein-2 metric proximal on the generators, based on the gradient operator induced by optimal transport.', 'truncated': False, 'reference': 'We propose the Wasserstein proximal method for training GANs.'}
+{'id': 'test-0001', 'adapted': 'We show that the parameter-function map of many DNNs should be exponentially biased towards simple functions, and provide evidence for this strong simplicity bias in a model DNN for Boolean functions.', 'truncated': False, 'reference': 'The parameter-function map of deep networks is hugely biased; this can explain why they generalize. We use PAC-Bayes and Gaussian processes to obtain nonvacuous bounds.'}
+{'outcome': 'the adapted model scores above the frozen model on ROUGE-L', 'adapted_rougeL_above_frozen': True, 'delta_rougeL': 8.1, 'adapted': True, 'default_configuration': True, 'report': 'outputs/bart_summarization_evaluation_report.json'}
+{'stage': 'evaluate', 'status': 'ok', 'seconds': 76.6}
+[colab] Executing cell 11/14 - bart_summarization-35...
+Running stage 'new' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/new.log
+{'id': 'new-00', 'summary': 'We present a novel approach for learning to predict sets with unknown permutation and cardinality using deep neural networks.', 'reference': 'We present a novel approach for learning to predict sets with unknown permutation and cardinality using feed-forward deep neural networks.', 'truncated': False}
+{'id': 'new-01', 'summary': 'We compare variable-resolution downsampling methods with foveating and non-foveating deep networks and a Densenet-121 network.', 'reference': 'We compare object recognition performance on images that are downsampled uniformly and with three different foveation schemes.', 'truncated': False}
+{'id': 'new-02', 'summary': 'We train deep neural networks that are robust to adversarial perturbations and can be verified more easily.', 'reference': 'We develop methods to train deep neural models that are both robust to adversarial perturbations and whose robustness is significantly easier to verify.', 'truncated': False}
+{'id': 'new-03', 'summary': 'We introduce Robust Normalization and experimentally show that it is not only resilient to adversarial perturbation but also inherit the benefits of BatchNorm.', 'reference': 'Investigation of how BatchNorm causes adversarial vulnerability and how to avoid it.', 'truncated': False}
+{'documents_are': 'unseen SciTLDR dev abstracts (in none of the splits)', 'n': 4, 'rouge1': 51.79, 'rougeL': 45.71, 'verdict': 'measured-small-sample', 'single_document_report_verdict': 'sample-sanity'}
+{'stage': 'new', 'status': 'ok', 'seconds': 15.6}
+[colab] Executing cell 12/14 - bart_summarization-38...
+Running stage 'reload' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/reload.log
+{'artifact': '/content/outputs/bart_summarization/74ee3249069a/outputs/bart_summarization_adapter', 'format': 'org.valcorza.bart-large-cnn.adapter.v1', 'tensors': 52, 'bytes': 134379512, 'sha256': 'dcc9c46f5e9e9797...'}
+{'reload_parity': {'decoder_tensors_identical': True, 'identical_summaries': 4, 'of': 4, 'reload_verification': 'PASSED', 'reloaded_best_epoch': 2, 'compared': 'every decoder-block tensor (SHA-256) and the summaries of the first test documents, against the trained model in the adapt stage'}}
+{'stage': 'reload', 'status': 'ok', 'seconds': 15.5}
+[colab] Executing cell 13/14 - bart_summarization-41...
+Running stage 'bundle' in the isolated environment; log: /content/outputs/bart_summarization/74ee3249069a/logs/bundle.log
+{'outputs_directory': '/content/outputs/bart_summarization/74ee3249069a/outputs'}
+  - bart_summarization_adapter/adapter.safetensors (131230.0 KB)
+  - bart_summarization_adapter/manifest.json (4.9 KB)
+  - bart_summarization_dataset_manifest.json (2.3 KB)
+  - bart_summarization_evaluation_report.json (9.1 KB)
+  - bart_summarization_frozen_test.json (4.2 KB)
+  - bart_summarization_inference.json (1.8 KB)
+  - bart_summarization_input_manifest.json (1.6 KB)
+  - bart_summarization_new_documents.json (5.2 KB)
+  - bart_summarization_reload_parity.json (0.3 KB)
+  - bart_summarization_result.json (6.9 KB)
+  - bart_summarization_summaries.csv (1.2 KB)
+  - bart_summarization_train.csv (365.3 KB)
+  - bart_summarization_training_history.json (1.1 KB)
+  - runtime.json (0.3 KB)
+{'stage': 'bundle', 'status': 'ok', 'seconds': 0.4}
+[colab] Executing cell 14/14 - bart_summarization-43...
+{'activity': 'skipped (optional)', 'to_run': 'set RUN_ACTIVITY = True, then run this cell'}
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/bart-cnn-summarization-pipeline-a7b0694-9e8965/bart_summarization_colab_a7b0694_colab-cli-t4_output.ipynb'...
