@@ -321,9 +321,14 @@ def test_m4_minor_lead_baselines_are_not_said_to_use_the_tldr_settings():
 
 def _obtain_upload(namespace: dict):
     install = next(c["source"] for c in CODE if c["source"].startswith("# @title Infrastructure: install"))
-    function = next(node for node in ast.parse(install).body if isinstance(node, ast.FunctionDef) and node.name == "obtain_upload")
-    exec(ast.unparse(function), namespace)  # noqa: S102 - the notebook's own helper
+    nodes = [node for node in ast.parse(install).body if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name in ("Refused", "obtain_upload")]
+    exec("\n\n".join(ast.unparse(node) for node in nodes), namespace)  # noqa: S102 - the notebook's own helpers
     return namespace["obtain_upload"]
+
+
+def namespace_refused(obtain):
+    """The notebook's ``Refused``: a user-input problem renders as one line, not a traceback (DAT20)."""
+    return obtain.__globals__["Refused"]
 
 
 def test_m5_minor_byod_path_works_without_google_colab_and_an_empty_upload_says_what_to_do(tmp_path, monkeypatch):
@@ -332,13 +337,13 @@ def test_m5_minor_byod_path_works_without_google_colab_and_an_empty_upload_says_
     obtain = _obtain_upload({"Path": Path, "ROOT": tmp_path})
     monkeypatch.setitem(sys.modules, "google.colab", None)
     assert obtain(str(path), (".csv", ".json", ".jsonl"), "BYOD_PATH") == path.resolve()
-    with pytest.raises(RuntimeError, match="set BYOD_PATH to its path"):
+    with pytest.raises(namespace_refused(obtain), match="set BYOD_PATH to its path"):
         obtain("", (".csv", ".json", ".jsonl"), "BYOD_PATH")
     colab = types.ModuleType("google.colab")
     colab.files = types.SimpleNamespace(upload=lambda: {})
     monkeypatch.setitem(sys.modules, "google", types.ModuleType("google"))
     monkeypatch.setitem(sys.modules, "google.colab", colab)
-    with pytest.raises(ValueError, match="No file was uploaded"):
+    with pytest.raises(namespace_refused(obtain), match="No file was uploaded"):
         obtain("", (".csv", ".json", ".jsonl"), "BYOD_PATH")
     assert "BYOD_PATH = ''  # @param {type:\"string\"}" in "\n".join(KERNEL)
 
