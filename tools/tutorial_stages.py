@@ -12,6 +12,9 @@ written by ``adapt`` and the JSON records of earlier stages. Every stage that ru
 files, so a stage re-run after a change always starts from the frozen model and never from an earlier adaptation
 (BART-M3). Learner-facing exports go to ``RUN_DIR/outputs``; hand-off state goes to ``RUN_DIR/state``. On failure a
 stage writes ``RUN_DIR/state/<stage>.error.json`` with the exception type and message, which the notebook re-raises.
+A BYOD dataset the ``data`` stage refuses is not a failure (NOTEBOOK_SPEC 3.0 DAT19/DAT20): the stage raises ``Refused``,
+prints no traceback, removes the earlier configuration's results, records ``"refused": true`` with the file name and the
+rule, and exits with ``REFUSED_EXIT``; the notebook then shows one ``Refused: <file>: <reason>`` line.
 
 Stages: weights → runtime → data → inference → frozen → adapt → evaluate → new → reload → bundle, plus the optional
 ``activity``. The package API does the work; this runner only sequences it and adds the tutorial's own checks (the
@@ -65,6 +68,31 @@ DOCUMENT = (
 )
 # Files each stage writes. A stage first removes its own files and those of every stage that reads them
 # (DEPENDANTS), so no record from an earlier configuration can be read as a result of the current one.
+REFUSED_EXIT = 3  # a user input refused with a learner-facing message (DAT20); a crash exits 2
+
+
+class Refused(ValueError):
+    """A user-supplied input that breaks the input contract (DAT19). Not a crash: no traceback is printed for it."""
+
+    def __init__(self, file: str, reason: str) -> None:
+        self.file = str(file) or "your input"
+        self.reason = str(reason).strip()
+        super().__init__(f"{self.file}: {self.reason}")
+
+
+def refused(exc: BaseException, file: str, fix: str) -> Refused:
+    """``exc`` (whose message may start with ``<file>: ``) as one ``Refused`` naming ``file``, with how to recover."""
+    message = str(exc).strip() or type(exc).__name__
+    if message.startswith(f"{file}: "):
+        message = message[len(file) + 2:]
+    if not message.endswith((".", ")")):
+        message += "."
+    if "Section 5" not in message:  # the rule's own message may already say how to recover
+        message += f" {fix}"
+    return Refused(file, message)
+
+
+BYOD_FIX = "Fix the file and run the Section 5 cell again."
 STAGE_FILES: dict[str, tuple[str, ...]] = {
     "data": ("data.json", "splits.json", f"{STEM}_dataset_manifest.json", f"{STEM}_train.csv"),
     "inference": ("generation.json", f"{STEM}_input_manifest.json", f"{STEM}_inference.json"),
@@ -365,9 +393,8 @@ def stage_runtime(run: Run) -> None:
 
 def stage_data(run: Run) -> None:
     """Section 5: the pinned SciTLDR sample or BYOD; record contract, workflow minimum, token ceilings, disjoint split,
-    training CSV, refusal probes. Nothing here runs the model; the tokenizer only counts tokens."""
-    from transformers import BartTokenizerFast
-
+    training CSV, refusal probes. Nothing here runs the model; the tokenizer only counts tokens. A BYOD file that breaks
+    a rule raises ``Refused`` naming it (DAT19/DAT20); the same checks failing on the pinned sample are bugs and raise."""
     from bart_summarization_pipeline import (
         CORPUS_FILES,
         CORPUS_LICENSE,
@@ -390,12 +417,17 @@ def stage_data(run: Run) -> None:
     if run.options.byod:
         original = Path(run.options.byod).resolve()
         if not original.is_file():
-            raise FileNotFoundError(f"BYOD file not found: {original}")
+            raise Refused(str(original), "is not a file in this runtime: correct BYOD_PATH, or leave it empty to upload in Colab, then run the Section 5 cell again.")
         byod_path = run.state / "byod_incoming" / original.name
         byod_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(original, byod_path)
     if byod_path is not None:
-        splits, byod_report = prepare_byod(load_byod_dataset(byod_path), seed)
+        try:  # every check here reads the learner's file: an error is the file, not a bug (DAT19)
+            splits, byod_report = prepare_byod(load_byod_dataset(byod_path), seed)
+            manifests = {name: validate_dataset(part, min_records=MIN_RECORDS if name == "train" else 1) for name, part in splits.items()}
+            disjoint = check_split_disjoint(splits)
+        except (ValueError, TypeError, KeyError, IndexError, UnicodeError, csv.Error) as exc:
+            raise refused(exc, byod_path.name, BYOD_FIX) from None
         new_records = [{**r, "id": f"new-{i:02d}"} for i, r in enumerate(splits["test"][:N_NEW])]
         source, data_source = "byod", f"BYOD ({byod_path.name})"
         new_kind = "BYOD test records (already scored in Section 9; not unseen documents)"
@@ -409,13 +441,19 @@ def stage_data(run: Run) -> None:
         new_kind = "unseen SciTLDR dev abstracts (in none of the splits)"
         raw = {name: len(part) for name, part in corpus.items()}
         byod_report = None
-    manifests = {name: validate_dataset(part, min_records=MIN_RECORDS if name == "train" else 1) for name, part in splits.items()}
-    disjoint = check_split_disjoint(splits)
-    if source == "sample":
+        manifests = {name: validate_dataset(part, min_records=MIN_RECORDS if name == "train" else 1) for name, part in splits.items()}
+        disjoint = check_split_disjoint(splits)
         check_split_disjoint({**splits, "new": new_records})  # the Section 10 documents are in none of the splits
+    from transformers import BartTokenizerFast  # after the BYOD checks, which need no model library
+
     tokenizer = BartTokenizerFast.from_pretrained(str(run.snapshot), local_files_only=True)
-    ceilings = check_token_ceilings({**splits, "new": new_records}, lambda text: len(tokenizer(text, truncation=False)["input_ids"]))
-    # Accepted: only now are the earlier configuration's results cleared, so a refused input leaves them intact.
+    try:
+        ceilings = check_token_ceilings({**splits, "new": new_records}, lambda text: len(tokenizer(text, truncation=False)["input_ids"]))
+    except ValueError as exc:
+        if byod_path is None:  # the pinned sample over the ceiling is a bug, not a refusal
+            raise
+        raise refused(exc, byod_path.name, BYOD_FIX) from None
+    # Accepted: the earlier configuration's results are cleared now. A refused input clears them in main() (DAT20).
     removed = run.invalidate("data")
     if byod_path is not None:
         accepted = run.state / "byod" / byod_path.name
@@ -799,6 +837,12 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     try:
         STAGES[options.stage](run)
+    except Refused as exc:  # the learner's input was refused, not a crash: no traceback, a dedicated exit code (DAT20)
+        removed = run.invalidate(options.stage)  # no earlier configuration's result may pass as this input's result
+        if removed:
+            print({"removed_earlier_results": sorted(set(removed))}, flush=True)
+        error_file.write_text(json.dumps({"stage": options.stage, "type": "Refused", "refused": True, "file": exc.file, "message": str(exc)}), encoding="utf-8")
+        return REFUSED_EXIT
     except Exception as exc:  # the notebook re-raises this message in the kernel
         traceback.print_exc()
         message = str(exc) or repr(exc)
