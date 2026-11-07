@@ -1,0 +1,70 @@
+{
+  "repo": "bart-cnn-summarization-pipeline",
+  "sha": "6aec2a1c13e80128ab0bc4026aa38ed90180769f",
+  "notebook": "tutorials/bart_summarization_colab.ipynb",
+  "blob": "601d3e37e6c1c30bf71a87821229cef8a4def76e",
+  "gpu": "T4",
+  "session": "suite-bart-6aec2a1-9e89",
+  "started_utc": "2026-11-02T14:49:47+00:00",
+  "runner": "Colab CLI `colab exec -f` on a fresh session (not a browser Run all)",
+  "overrides": [
+    {
+      "name": "USE_BYOD",
+      "from": "False",
+      "to": "True"
+    },
+    {
+      "name": "BYOD_PATH",
+      "from": "''",
+      "to": "'/content/sample_data/california_housing_test.csv'"
+    }
+  ],
+  "run_copy_blob": "b3c96ccb75a2ffb340fed5f0bf00bae8b9d641ef",
+  "run_copy_sha256": "5647197637cb631fd925e64f3d6da9964fd8c7e0d9aa2c4ff39ccc5d06ccc56e",
+  "run_copy_note": "refusal run: the run copy is the committed notebook with the listed assignment overrides, cut immediately after the refusal cell and re-serialised (nbformat layout); input_unchanged compares against that copy",
+  "truncated_after_cell": "bart_summarization-20",
+  "refusal_cell_ref": "bart_summarization-20",
+  "refusal_cell_index": 6,
+  "cells_dropped": 26,
+  "code_cells_dropped": 8,
+  "original_sha256": "85c6751d587e159114ab050c3aad6e2a889ad443270dbfb01378deaa8085c70b",
+  "status": "[suite-bart-6aec2a1-9e89] gpu-t4-s-usw4b0-3gspm3v526tx9 | Hardware: T4 | Shape: Standard | Variant: GPU | Status: IDLE",
+  "exec_exit_code": 0,
+  "stopped": true,
+  "stop_verified": true,
+  "wall_s": 105.4,
+  "input_unchanged": true,
+  "executed_file": "bart_summarization_colab_6aec2a1_colab-cli-t4_output.ipynb",
+  "log_cells": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "log_total": 6,
+  "code_cells": 6,
+  "executed_cells": 6,
+  "errors": [
+    {
+      "cell": "bart_summarization-20",
+      "ename": "Refused",
+      "evalue": "california_housing_test.csv: CSV is missing columns ['id', 'source', 'target']. Fix the file and run the Section 5 cell again."
+    }
+  ],
+  "execution_counts": [],
+  "sequential": null,
+  "executed_sha256": "a7f1c16fcb33f957c24bfc5bc177a6144a7b5053f5ef8836743e957b3d0146f7",
+  "log_sequential_complete": true,
+  "mode": "expect_refusal",
+  "refusal_line": "Refused: california_housing_test.csv: CSV is missing columns ['id', 'source', 'target']. Fix the file and run the Section 5 cell again.",
+  "halting_cell_index": 6,
+  "halting_cell_id": "bart_summarization-20",
+  "error_cells": [
+    6
+  ],
+  "refusal_fail_reasons": [],
+  "refusal_ok": true,
+  "verdict": "PASS"
+}
